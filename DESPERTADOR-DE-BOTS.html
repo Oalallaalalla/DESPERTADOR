@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="es">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Despertador de Bots</title>
+<style>
+  :root{
+    --bg:#14171b; --bg2:#0d1013; --card:#1d2126; --card2:#22272d;
+    --text:#e8ebee; --muted:#8b939b; --naranja:#ff6600; --naranja2:#ff8f1c;
+    --ok:#2ecc71; --bad:#e74c3c; --wait:#f1c40f;
+    --mono:"Cascadia Code",Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;min-height:100vh;color:var(--text);
+    font-family:"Segoe UI",system-ui,sans-serif;
+    background:radial-gradient(120% 90% at 50% 0%, var(--bg) 0%, var(--bg2) 100%);
+    display:flex;flex-direction:column;align-items:center;padding:28px 16px 60px;
+  }
+  header{text-align:center;margin-bottom:26px}
+  header .kicker{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--naranja)}
+  header h1{margin:6px 0 4px;font-size:34px;letter-spacing:-.02em}
+  header p{margin:0;color:var(--muted);font-size:14px}
+  .wrap{width:100%;max-width:560px;display:flex;flex-direction:column;gap:14px}
+
+  .card{
+    background:var(--card);border:1px solid #2b3138;border-radius:14px;
+    padding:16px 18px;display:flex;align-items:center;gap:14px;
+  }
+  .dot{width:14px;height:14px;border-radius:50%;background:#555;flex:none;transition:background .3s}
+  .dot.ok{background:var(--ok);box-shadow:0 0 10px var(--ok)}
+  .dot.bad{background:var(--bad);box-shadow:0 0 10px var(--bad)}
+  .dot.wait{background:var(--wait);box-shadow:0 0 10px var(--wait);animation:puls 1s infinite}
+  @keyframes puls{50%{opacity:.4}}
+  .info{flex:1;min-width:0}
+  .info .nombre{font-weight:700;font-size:16px}
+  .info .url{font-family:var(--mono);font-size:11px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .info .estado{font-size:12.5px;color:var(--muted);margin-top:3px}
+  .info .estado b{color:var(--text)}
+
+  button{
+    appearance:none;border:none;cursor:pointer;border-radius:99px;
+    font-family:inherit;font-weight:700;font-size:14px;
+    transition:transform .1s, filter .2s;
+  }
+  button:active{transform:scale(.96)}
+  .btn-despertar{
+    background:linear-gradient(135deg,var(--naranja),var(--naranja2));color:#fff;
+    padding:10px 18px;flex:none;
+  }
+  .btn-despertar:hover{filter:brightness(1.12)}
+  .btn-borrar{background:transparent;color:var(--muted);font-size:17px;padding:6px 8px;flex:none}
+  .btn-borrar:hover{color:var(--bad)}
+
+  .btn-todos{
+    width:100%;padding:15px;font-size:16px;color:#fff;
+    background:linear-gradient(135deg,var(--naranja),var(--naranja2));
+    box-shadow:0 8px 24px rgba(255,102,0,.3);
+  }
+  .btn-todos:hover{filter:brightness(1.12)}
+  .btn-todos:disabled{opacity:.5;cursor:default}
+
+  .agregar{
+    background:var(--card2);border:1px dashed #3a424b;border-radius:14px;padding:16px 18px;
+    display:flex;flex-direction:column;gap:10px;
+  }
+  .agregar .titulo{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+  .agregar input{
+    background:var(--bg2);border:1px solid #3a424b;border-radius:8px;color:var(--text);
+    padding:11px 13px;font-size:14px;font-family:inherit;width:100%;
+  }
+  .agregar input:focus{outline:2px solid var(--naranja);border-color:transparent}
+  .btn-agregar{background:#2e353d;color:var(--text);padding:11px;font-size:14px}
+  .btn-agregar:hover{background:#39424c}
+
+  .keep{
+    display:flex;align-items:center;gap:12px;background:var(--card2);
+    border-radius:14px;padding:13px 18px;font-size:13.5px;color:var(--muted);
+  }
+  .keep b{color:var(--text)}
+  .switch{position:relative;width:46px;height:26px;flex:none;cursor:pointer}
+  .switch input{opacity:0;width:0;height:0}
+  .slider{position:absolute;inset:0;background:#3a424b;border-radius:99px;transition:.25s}
+  .slider::before{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;background:#fff;border-radius:50%;transition:.25s}
+  .switch input:checked + .slider{background:var(--naranja)}
+  .switch input:checked + .slider::before{transform:translateX(20px)}
+
+  .vacio{text-align:center;color:var(--muted);font-size:14px;padding:26px 10px;border:1px dashed #3a424b;border-radius:14px}
+  .pie{margin-top:22px;font-family:var(--mono);font-size:10.5px;color:#5a626a;text-align:center;line-height:1.7}
+</style>
+<body>
+<header>
+  <div class="kicker">Panel de control</div>
+  <h1>⏰ Despertador de Bots</h1>
+  <p>Un toque y tus bots dormidos en la nube vuelven a la vida.</p>
+</header>
+
+<div class="wrap">
+  <div id="lista"></div>
+
+  <button class="btn-todos" id="btnTodos" onclick="despertarTodos()">🔥 DESPERTAR TODOS</button>
+
+  <label class="keep">
+    <span class="switch"><input type="checkbox" id="chkKeep" onchange="toggleKeep()"><span class="slider"></span></span>
+    <span><b>Mantener despiertos</b> — ping automático cada 10 min mientras esta página esté abierta.</span>
+  </label>
+
+  <div class="agregar">
+    <div class="titulo">＋ Agregar bot</div>
+    <input id="inNombre" placeholder="Nombre (ej: Bot de Telegram)">
+    <input id="inUrl" placeholder="URL del bot (ej: https://mi-bot.onrender.com)">
+    <button class="btn-agregar" onclick="agregar()">Agregar a la lista</button>
+  </div>
+</div>
+
+<p class="pie">La URL es la dirección de tu hosting (Render, Railway, Koyeb…).<br>
+Los bots se guardan en este navegador · hecho para el proyecto BOT</p>
+
+<script>
+let bots = JSON.parse(localStorage.getItem('bots') || '[]');
+let keepTimer = null;
+
+function guardar(){ localStorage.setItem('bots', JSON.stringify(bots)); }
+
+function render(){
+  const c = document.getElementById('lista');
+  if (!bots.length){
+    c.innerHTML = '<div class="vacio">Aún no hay bots.<br>Agrega abajo la URL de tu bot en la nube. 👇</div>';
+    document.getElementById('btnTodos').disabled = true;
+    return;
+  }
+  document.getElementById('btnTodos').disabled = false;
+  c.innerHTML = bots.map((b,i)=>`
+    <div class="card" style="margin-bottom:12px">
+      <span class="dot" id="dot${i}"></span>
+      <div class="info">
+        <div class="nombre">${esc(b.nombre)}</div>
+        <div class="url">${esc(b.url)}</div>
+        <div class="estado" id="est${i}">Sin comprobar todavía</div>
+      </div>
+      <button class="btn-despertar" onclick="despertar(${i})">Despertar</button>
+      <button class="btn-borrar" title="Quitar" onclick="borrar(${i})">✕</button>
+    </div>`).join('');
+}
+
+function esc(s){ return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;'); }
+
+function agregar(){
+  const n = document.getElementById('inNombre').value.trim();
+  let u = document.getElementById('inUrl').value.trim();
+  if (!u){ alert('Pega la URL de tu bot'); return; }
+  if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+  bots.push({ nombre: n || 'Mi bot', url: u });
+  guardar(); render();
+  document.getElementById('inNombre').value = '';
+  document.getElementById('inUrl').value = '';
+}
+
+function borrar(i){
+  if (!confirm('¿Quitar "' + bots[i].nombre + '" de la lista?')) return;
+  bots.splice(i,1); guardar(); render();
+}
+
+async function despertar(i){
+  const dot = document.getElementById('dot'+i);
+  const est = document.getElementById('est'+i);
+  dot.className = 'dot wait';
+  est.innerHTML = 'Despertando… (si estaba dormido puede tardar hasta 1 min)';
+  const inicio = Date.now();
+  try {
+    const ctl = new AbortController();
+    const t = setTimeout(()=>ctl.abort(), 90000);
+    await fetch(bots[i].url, { mode:'no-cors', cache:'no-store', signal: ctl.signal });
+    clearTimeout(t);
+    const seg = ((Date.now()-inicio)/1000).toFixed(1);
+    dot.className = 'dot ok';
+    est.innerHTML = '<b>✅ DESPIERTO</b> · respondió en ' + seg + ' s · ' + hora();
+  } catch {
+    dot.className = 'dot bad';
+    est.innerHTML = '<b>❌ No responde</b> · revisa la URL o el hosting · ' + hora();
+  }
+}
+
+function despertarTodos(){ bots.forEach((_,i)=>despertar(i)); }
+
+function toggleKeep(){
+  if (document.getElementById('chkKeep').checked){
+    despertarTodos();
+    keepTimer = setInterval(despertarTodos, 10*60*1000);
+  } else {
+    clearInterval(keepTimer); keepTimer = null;
+  }
+}
+
+function hora(){ return new Date().toLocaleTimeString('es-PE',{hour:'2-digit',minute:'2-digit'}); }
+
+render();
+</script>
+</body>
+</html>
